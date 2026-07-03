@@ -1,0 +1,17 @@
+{
+  "name": "คลังสินค้า - ระบบสต็อกสินค้า",
+  "short_name": "คลังสินค้า",
+  "description": "ระบบจัดการสต็อกสินค้า แบรนด์/หมวดหมู่ และรายการรับ-จ่ายสินค้า",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#EEF1EE",
+  "theme_color": "#1F4B3F",
+  "lang": "th",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

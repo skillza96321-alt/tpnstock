@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>คลังสินค้า - ระบบสต็อกสินค้า</title>
+<meta name="description" content="ระบบจัดการสต็อกสินค้า แบรนด์/หมวดหมู่ และรายการรับ-จ่ายสินค้า">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F4B3F">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+
+<!-- iOS install support -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="คลังสินค้า">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF1EE;
+    --surface:#FFFFFF;
+    --surface-alt:#F5F7F5;
+    --ink:#16211D;
+    --ink-soft:#5B6B63;
+    --primary:#1F4B3F;
+    --primary-light:#2F6E5A;
+    --line:#DAE1DB;
+    --in:#2F8F5B;
+    --in-bg:#E6F4EC;
+    --out:#B5502B;
+    --out-bg:#FBEAE2;
+    --accent:#C98A3B;
+    --radius:10px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Thai', sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .num{font-family:'IBM Plex Mono', monospace; font-weight:600; letter-spacing:0.02em;}
+  .app{ display:flex; min-height:100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:220px; flex-shrink:0;
+    background:var(--primary);
+    color:#EAF2EC;
+    display:flex; flex-direction:column;
+    padding:22px 14px;
+  }
+  .brandmark{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:19px;
+    color:#fff;
+    display:flex; align-items:center; gap:8px;
+    padding:0 8px 20px 8px;
+    border-bottom:1px solid rgba(255,255,255,0.14);
+    margin-bottom:16px;
+  }
+  .brandmark .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px; font-weight:600;
+    background:var(--accent); color:#241605;
+    padding:2px 6px; border-radius:4px;
+    letter-spacing:0.04em;
+  }
+  .navlist{ list-style:none; display:flex; flex-direction:column; gap:2px; }
+  .navlist button{
+    width:100%; text-align:left;
+    background:transparent; border:none;
+    color:#D9E7DE; font-family:inherit; font-size:14.5px; font-weight:500;
+    padding:10px 12px; border-radius:8px; cursor:pointer;
+    display:flex; align-items:center; gap:10px;
+    transition:background 0.15s, color 0.15s;
+  }
+  .navlist button:hover{ background:rgba(255,255,255,0.08); color:#fff; }
+  .navlist button.active{ background:#EAF2EC; color:var(--primary); font-weight:600; }
+  .navlist .ico{ font-size:16px; width:18px; text-align:center; }
+  .sidebar-foot{
+    margin-top:auto; padding:12px 8px 0 8px;
+    border-top:1px solid rgba(255,255,255,0.14);
+    font-size:11px; color:#A9C4B6; line-height:1.6;
+  }
+
+  /* ---------- Main ---------- */
+  .main{ flex:1; padding:28px 34px; max-width:1180px; }
+  .pagehead{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:22px; flex-wrap:wrap; gap:12px;}
+  .pagehead h1{
+    font-family:'Chakra Petch', sans-serif; font-size:24px; font-weight:700;
+    color:var(--primary);
+  }
+  .pagehead p{ color:var(--ink-soft); font-size:13.5px; margin-top:3px; }
+  .btn{
+    font-family:inherit; font-size:13.5px; font-weight:600;
+    border:none; border-radius:8px; cursor:pointer;
+    padding:10px 16px; display:inline-flex; align-items:center; gap:6px;
+    transition:transform 0.1s, box-shadow 0.15s;
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn-primary{ background:var(--primary); color:#fff; }
+  .btn-primary:hover{ background:var(--primary-light); }
+  .btn-ghost{ background:var(--surface); color:var(--primary); border:1px solid var(--line); }
+  .btn-ghost:hover{ border-color:var(--primary); }
+  .btn-danger{ background:var(--out-bg); color:var(--out); }
+  .btn-danger:hover{ background:#F5D6C6; }
+  .btn-sm{ padding:6px 10px; font-size:12.5px; border-radius:6px; }
+
+  /* stat cards */
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px; }
+  .stat-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 18px; position:relative; overflow:hidden;
+  }
+  .stat-card .label{ font-size:12px; color:var(--ink-soft); font-weight:500; margin-bottom:6px; }
+  .stat-card .value{ font-family:'IBM Plex Mono', monospace; font-size:26px; font-weight:600; color:var(--primary); }
+  .stat-card.warn .value{ color:var(--out); }
+  .stat-card::after{
+    content:""; position:absolute; right:-10px; top:-10px; width:60px; height:60px;
+    border-radius:50%; background:var(--surface-alt); z-index:0;
+  }
+
+  .panel{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin-bottom:20px; }
+  .panel h2{ font-family:'Chakra Petch', sans-serif; font-size:16px; color:var(--primary); margin-bottom:14px; }
+
+  /* กลุ่มสินค้าตามหมวดหมู่ */
+  .group{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:16px; overflow:hidden; }
+  .group-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 18px; background:var(--surface-alt); border-bottom:1px solid var(--line);
+  }
+  .group-head .name{ font-family:'Chakra Petch', sans-serif; font-weight:600; font-size:15px; color:var(--primary); }
+  .group-head .meta{ font-size:12px; color:var(--ink-soft); font-family:'IBM Plex Mono', monospace; }
+  .group-row{
+    display:flex; align-items:center; gap:12px; padding:12px 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .group-row:last-child{ border-bottom:none; }
+  .group-row:hover{ background:var(--surface-alt); }
+  .group-row .gr-name{ flex:1; font-size:13.5px; min-width:0; }
+  .group-row .gr-stock{ width:60px; text-align:right; flex-shrink:0; }
+  .group-row .gr-bar{ width:80px; flex-shrink:0; }
+  .group-row .gr-actions{ flex-shrink:0; display:flex; gap:6px; }
+  .group-empty{ padding:24px; text-align:center; color:var(--ink-soft); font-size:13px; }
+  .group-columns{
+    display:flex; align-items:center; gap:12px; padding:8px 18px;
+    background:var(--surface-alt); border-bottom:1px solid var(--line);
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--ink-soft); font-weight:600;
+  }
+  .group-columns .col-thumb{ width:42px; flex-shrink:0; }
+  .group-columns .col-name{ flex:1; min-width:0; }
+  .group-columns .col-bar{ width:80px; flex-shrink:0; }
+  .group-columns .col-stock{ width:60px; text-align:right; flex-shrink:0; }
+  .group-columns .col-actions{ flex-shrink:0; width:206px; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  thead th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--ink-soft); font-weight:600; padding:8px 10px; border-bottom:2px solid var(--line);
+  }
+  tbody td{ padding:11px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface-alt); }
+  .empty-row td{ text-align:center; color:var(--ink-soft); padding:28px; font-size:13px; }
+
+  .badge{
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:20px;
+  }
+  .badge-in{ background:var(--in-bg); color:var(--in); }
+  .badge-out{ background:var(--out-bg); color:var(--out); }
+  .badge-cat{
+    background:var(--surface-alt); color:var(--primary); border:1px solid var(--line);
+    font-size:13.5px; font-weight:700; padding:5px 14px;
+    font-family:'Chakra Petch', sans-serif;
+  }
+
+  .stockbar{ width:90px; height:6px; border-radius:4px; background:var(--surface-alt); overflow:hidden; border:1px solid var(--line); }
+  .stockbar-fill{ height:100%; background:var(--primary-light); }
+  .stockbar-fill.low{ background:var(--out); }
+
+  /* product image */
+  .thumb{
+    width:42px; height:42px; border-radius:8px; object-fit:cover;
+    border:1px solid var(--line); background:var(--surface-alt); flex-shrink:0;
+  }
+  .thumb-placeholder{
+    width:42px; height:42px; border-radius:8px; border:1px dashed var(--line);
+    background:var(--surface-alt); display:flex; align-items:center; justify-content:center;
+    font-size:16px; color:var(--ink-soft); flex-shrink:0;
+  }
+  .product-cell{ display:flex; align-items:center; gap:10px; }
+  .image-upload{
+    border:1.5px dashed var(--line); border-radius:10px; padding:14px;
+    display:flex; align-items:center; gap:14px; background:var(--surface-alt);
+  }
+  .image-upload .preview{
+    width:64px; height:64px; border-radius:8px; object-fit:cover;
+    border:1px solid var(--line); background:var(--surface); flex-shrink:0;
+  }
+  .image-upload .preview-placeholder{
+    width:64px; height:64px; border-radius:8px; border:1px solid var(--line);
+    background:var(--surface); display:flex; align-items:center; justify-content:center;
+    font-size:22px; color:var(--ink-soft); flex-shrink:0;
+  }
+  .image-upload .upload-actions{ display:flex; flex-direction:column; gap:6px; flex:1; }
+  .image-upload input[type=file]{ font-size:12px; font-family:inherit; }
+  .image-upload .hint{ font-size:11px; color:var(--ink-soft); }
+
+  /* forms / modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(22,33,29,0.45);
+    display:none; align-items:center; justify-content:center; z-index:50; padding:16px;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:var(--surface); border-radius:12px; width:100%; max-width:420px;
+    padding:22px; box-shadow:0 20px 50px rgba(0,0,0,0.25);
+  }
+  .modal h3{ font-family:'Chakra Petch', sans-serif; color:var(--primary); font-size:17px; margin-bottom:16px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:5px; }
+  .field input, .field select{
+    width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:7px;
+    font-family:inherit; font-size:13.5px; background:var(--surface-alt); color:var(--ink);
+  }
+  .field input:focus, .field select:focus{ outline:2px solid var(--primary-light); outline-offset:1px; background:#fff; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+
+  .toolbar{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
+  .toolbar select, .toolbar input[type=text]{
+    padding:9px 11px; border:1px solid var(--line); border-radius:7px; font-family:inherit;
+    font-size:13px; background:var(--surface);
+  }
+  .toolbar .spacer{ flex:1; }
+
+  .type-toggle{ display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; width:fit-content; }
+  .type-toggle button{
+    padding:9px 18px; border:none; background:var(--surface); font-family:inherit; font-weight:600; font-size:13px; cursor:pointer; color:var(--ink-soft);
+  }
+  .type-toggle button.sel-in.active{ background:var(--in-bg); color:var(--in); }
+  .type-toggle button.sel-out.active{ background:var(--out-bg); color:var(--out); }
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--primary); color:#fff; padding:11px 20px; border-radius:8px;
+    font-size:13.5px; font-weight:500; opacity:0; transition:all 0.25s; z-index:100; pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .loading-row{ text-align:center; padding:30px; color:var(--ink-soft); font-size:13px; }
+  ::placeholder{ color:#9CA9A1; }
+
+  @media (max-width: 820px){
+    .app{ flex-direction:column; }
+    .sidebar{
+      width:100%; flex-direction:row; overflow-x:auto; padding:10px 12px;
+      align-items:center; position:sticky; top:0; z-index:20;
+      box-shadow:0 2px 10px rgba(0,0,0,0.12);
+    }
+    .brandmark{ border:none; margin:0; padding:0 10px 0 0; font-size:16px; }
+    .navlist{ flex-direction:row; gap:4px; }
+    .navlist button{ padding:8px 12px; font-size:13px; white-space:nowrap; }
+    .sidebar-foot{ display:none; }
+    .main{ padding:14px; }
+    .stats{ grid-template-columns:1fr 1fr; gap:10px; }
+    .stat-card{ padding:12px 14px; }
+    .stat-card .value{ font-size:21px; }
+    .pagehead{ align-items:flex-start; }
+    .pagehead h1{ font-size:20px; }
+    .toolbar{ flex-direction:column; align-items:stretch; }
+    .toolbar select, .toolbar input[type=text]{ width:100%; }
+
+    /* แปลงตารางให้เป็นการ์ดสไตล์มือถือ อ่านง่ายกว่าตารางแคบๆ */
+    .panel table thead{ display:none; }
+    .panel table, .panel table tbody, .panel table tr, .panel table td{ display:block; width:100%; }
+    .panel{ padding:0; background:transparent; border:none; }
+    .panel h2{ padding:0 2px; margin-bottom:10px; }
+    .panel table tbody tr{
+      background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+      padding:14px; margin-bottom:10px;
+    }
+    .panel table tbody tr.empty-row{ background:var(--surface); }
+    .panel table td{
+      border-bottom:none; padding:6px 0; display:flex; align-items:center;
+      justify-content:space-between; gap:10px; text-align:right;
+    }
+    .panel table td[data-label]::before{
+      content:attr(data-label); font-size:11px; text-transform:uppercase; letter-spacing:0.04em;
+      color:var(--ink-soft); font-weight:600; text-align:left; flex-shrink:0;
+    }
+    .panel table td.cell-media{ justify-content:flex-start; padding-bottom:10px; }
+    .panel table td.cell-bar{ display:none; }
+    .panel table td.cell-actions{
+      flex-wrap:wrap; justify-content:flex-start; gap:8px;
+      padding-top:10px; margin-top:6px; border-top:1px solid var(--line);
+    }
+    .panel table td.cell-actions .btn{ flex:1; justify-content:center; min-width:80px; }
+    .panel table td.num{ font-size:15px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="brandmark">📦 คลังสินค้า <span class="tag">STOCK</span></div>
+    <ul class="navlist" id="navlist">
+      <li><button data-page="dashboard" class="active"><span class="ico">🗂️</span>ภาพรวม</button></li>
+      <li><button data-page="products"><span class="ico">🏷️</span>สินค้า</button></li>
+      <li><button data-page="categories"><span class="ico">🏭</span>แบรนด์/หมวดหมู่</button></li>
+      <li><button data-page="transactions"><span class="ico">↔️</span>รับ-จ่ายสต็อก</button></li>
+    </ul>
+    <div class="sidebar-foot">เชื่อมต่อฐานข้อมูลกลาง<br>ทุกคนเห็นข้อมูลชุดเดียวกัน</div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard">
+      <div class="pagehead">
+        <div>
+          <h1>ภาพรวมคลังสินค้า</h1>
+          <p>สรุปยอดสินค้าคงเหลือและความเคลื่อนไหวล่าสุด</p>
+        </div>
+        <button class="btn btn-ghost" onclick="loadState()">🔄 รีเฟรชข้อมูล</button>
+      </div>
+      <div class="stats">
+        <div class="stat-card"><div class="label">จำนวนสินค้าทั้งหมด</div><div class="value" id="stat-products">0</div></div>
+        <div class="stat-card"><div class="label">แบรนด์/หมวดหมู่</div><div class="value" id="stat-categories">0</div></div>
+        <div class="stat-card warn"><div class="label">สินค้าใกล้หมด (&lt; 5)</div><div class="value" id="stat-lowstock">0</div></div>
+      </div>
+      <div class="panel">
+        <h2>สินค้าใกล้หมดสต็อก</h2>
+        <table><thead><tr><th>สินค้า</th><th>แบรนด์</th><th>คงเหลือ</th></tr></thead>
+          <tbody id="lowstock-table"></tbody></table>
+      </div>
+      <div class="panel">
+        <h2>รายการเคลื่อนไหวล่าสุด</h2>
+        <table><thead><tr><th>วันที่</th><th>สินค้า</th><th>ประเภท</th><th>จำนวน</th></tr></thead>
+          <tbody id="recent-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- PRODUCTS -->
+    <div id="page-products" style="display:none;">
+      <div class="pagehead">
+        <div><h1>สินค้า</h1><p>จัดการรายชื่อสินค้าและดูสต็อกคงเหลือ</p></div>
+        <button class="btn btn-primary" id="add-product-btn">+ เพิ่มสินค้า</button>
+      </div>
+      <div class="toolbar">
+        <select id="filter-category"><option value="">ทุกแบรนด์/หมวดหมู่</option></select>
+        <input type="text" id="search-product" placeholder="ค้นหาชื่อสินค้า...">
+      </div>
+      <div class="panel" style="padding:0;">
+        <table><thead><tr><th></th><th>สินค้า</th><th>แบรนด์/หมวดหมู่</th><th>คงเหลือ</th><th></th><th style="width:280px;"></th></tr></thead>
+          <tbody id="products-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- CATEGORIES -->
+    <div id="page-categories" style="display:none;">
+      <div class="pagehead">
+        <div><h1>แบรนด์ / หมวดหมู่</h1><p>จัดกลุ่มสินค้าตามแบรนด์หรือหมวดหมู่</p></div>
+        <button class="btn btn-primary" id="add-category-btn">+ เพิ่มหมวดหมู่</button>
+      </div>
+      <div class="panel" style="padding:0;">
+        <table><thead><tr><th>ชื่อแบรนด์/หมวดหมู่</th><th>จำนวนสินค้า</th><th style="width:110px;"></th></tr></thead>
+          <tbody id="categories-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS -->
+    <div id="page-transactions" style="display:none;">
+      <div class="pagehead">
+        <div><h1>รับ-จ่ายสต็อก</h1><p>บันทึกการนำเข้าและนำออกสินค้า พร้อมวันที่</p></div>
+        <button class="btn btn-primary" id="add-tx-btn">+ บันทึกรายการ</button>
+      </div>
+      <div class="toolbar">
+        <select id="tx-filter-product"><option value="">ทุกสินค้า</option></select>
+        <select id="tx-filter-type">
+          <option value="">ทุกประเภท</option>
+          <option value="in">รับเข้า</option>
+          <option value="out">จ่ายออก</option>
+        </select>
+      </div>
+      <div class="panel" style="padding:0;">
+        <table><thead><tr><th>วันที่</th><th>สินค้า</th><th>แบรนด์</th><th>ประเภท</th><th>จำนวน</th><th>หมายเหตุ</th><th style="width:50px;"></th></tr></thead>
+          <tbody id="tx-table"></tbody></table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="overlay" id="modal-product">
+  <div class="modal">
+    <h3 id="modal-product-title">เพิ่มสินค้า</h3>
+    <input type="hidden" id="pf-id">
+    <input type="hidden" id="pf-image-data">
+    <div class="field"><label>ชื่อสินค้า</label><input type="text" id="pf-name" placeholder="เช่น เสื้อยืดสีขาว ไซส์ M"></div>
+    <div class="field"><label>แบรนด์/หมวดหมู่</label><select id="pf-category"></select></div>
+    <div class="field"><label>จำนวนสต็อกเริ่มต้น</label><input type="number" id="pf-stock" min="0" value="0"></div>
+    <div class="field">
+      <label>รูปสินค้า (ไม่บังคับ)</label>
+      <div class="image-upload">
+        <img id="pf-image-preview" class="preview" style="display:none;">
+        <div id="pf-image-placeholder" class="preview-placeholder">🖼️</div>
+        <div class="upload-actions">
+          <input type="file" id="pf-image-file" accept="image/*">
+          <span class="hint">รองรับ JPG/PNG ระบบจะย่อขนาดให้อัตโนมัติ</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="pf-image-remove" style="display:none; width:fit-content;">ลบรูป</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-product')">ยกเลิก</button>
+      <button class="btn btn-primary" id="pf-save">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-category">
+  <div class="modal">
+    <h3 id="modal-category-title">เพิ่มแบรนด์/หมวดหมู่</h3>
+    <input type="hidden" id="cf-id">
+    <div class="field"><label>ชื่อแบรนด์/หมวดหมู่</label><input type="text" id="cf-name" placeholder="เช่น Nike, เครื่องเขียน"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-category')">ยกเลิก</button>
+      <button class="btn btn-primary" id="cf-save">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-tx">
+  <div class="modal">
+    <h3>บันทึกรายการรับ-จ่ายสต็อก</h3>
+    <div class="field"><label>ประเภทรายการ</label>
+      <div class="type-toggle">
+        <button type="button" class="sel-in active" id="tf-type-in" onclick="setTxType('in')">รับเข้า</button>
+        <button type="button" class="sel-out" id="tf-type-out" onclick="setTxType('out')">จ่ายออก</button>
+      </div>
+    </div>
+    <div class="field"><label>สินค้า</label><select id="tf-product"></select></div>
+    <div class="field"><label>จำนวน</label><input type="number" id="tf-qty" min="1" value="1"></div>
+    <div class="field"><label>วันที่</label><input type="date" id="tf-date"></div>
+    <div class="field"><label>หมายเหตุ (ไม่บังคับ)</label><input type="text" id="tf-note" placeholder="เช่น สั่งซื้อจากซัพพลายเออร์"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-tx')">ยกเลิก</button>
+      <button class="btn btn-primary" id="tf-save">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="setup-banner">
+  <div class="modal" style="max-width:520px;">
+    <h3>ยังไม่ได้ตั้งค่าฐานข้อมูลกลาง</h3>
+    <p style="font-size:13.5px; color:var(--ink-soft); line-height:1.7; margin-bottom:14px;">
+      แอปนี้ต้องเชื่อมกับ Google ชีตก่อนใช้งาน กรุณาใส่ค่า
+      <b>GAS_URL</b> ที่ต้นไฟล์ index.html
+      (ดูขั้นตอนละเอียดในไฟล์ README.md ที่แนบมาด้วย) จากนั้นอัปโหลดไฟล์ขึ้นโฮสต์ใหม่อีกครั้ง
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="location.reload()">โหลดใหม่</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ====== ตั้งค่าฐานข้อมูลกลาง (Google ชีต ผ่าน Apps Script) ======
+   1. สร้าง Google ชีตและตั้งค่าตามขั้นตอนใน README.md
+   2. เปิด Extensions > Apps Script แล้ววางโค้ดจาก AppsScript.gs
+   3. Deploy เป็น Web app แล้วคัดลอกลิงก์มาใส่บรรทัดด้านล่างนี้    */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwAqFps-I436pzx7_ujs5CrElEBUOIbGD_RAjaC0rHCZs3MqL9T9pElFH_9TcGDod8A/exec';
+/* =============================================== */
+
+const isConfigured = GAS_URL.startsWith('http');
+
+async function gasRequest(payload){
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain avoids CORS preflight on Apps Script
+    body: JSON.stringify(payload)
+  });
+  const json = await res.json();
+  if(!json.success) throw new Error(json.error || 'เกิดข้อผิดพลาด');
+  return json;
+}
+</script>
+
+<script>
+let state = { categories: [], products: [], transactions: [] };
+let currentTxType = 'in';
+
+async function loadState(){
+  if(!isConfigured){
+    document.getElementById('setup-banner').classList.add('show');
+    return;
+  }
+  try{
+    const res = await fetch(GAS_URL + '?t=' + Date.now(), { method:'GET', cache:'no-store' });
+    const data = await res.json();
+    state.categories = data.categories.map(c=>({ id: Number(c.id), name: c.name }));
+    state.products = data.products.map(p=>({
+      id: Number(p.id), categoryId: Number(p.category_id), name: p.name,
+      initialStock: Number(p.initial_stock) || 0, image: p.image || null
+    }));
+    state.transactions = data.transactions.map(t=>({
+      id: Number(t.id), productId: Number(t.product_id), type: t.type,
+      qty: Number(t.qty), date: String(t.date).slice(0,10), note: t.note || ''
+    })).sort((a,b)=> b.date.localeCompare(a.date) || b.id-a.id);
+  }catch(e){
+    showToast('เชื่อมต่อฐานข้อมูลไม่สำเร็จ ตรวจสอบการตั้งค่าหรืออินเทอร์เน็ต');
+  }
+  renderAll();
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+/* ---------- computed helpers ---------- */
+function stockOf(productId){
+  const p = state.products.find(x=>x.id===productId);
+  if(!p) return 0;
+  let s = p.initialStock || 0;
+  state.transactions.forEach(tx=>{
+    if(tx.productId===productId){
+      s += tx.type==='in' ? tx.qty : -tx.qty;
+    }
+  });
+  return s;
+}
+function categoryName(catId){
+  const c = state.categories.find(x=>x.id===catId);
+  return c ? c.name : '-';
+}
+function productName(pid){
+  const p = state.products.find(x=>x.id===pid);
+  return p ? p.name : '(ถูกลบแล้ว)';
+}
+function fmtDate(d){
+  if(!d) return '-';
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('th-TH', {year:'numeric', month:'short', day:'numeric'});
+}
+
+/* ---------- nav ---------- */
+document.getElementById('navlist').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-page]');
+  if(!btn) return;
+  document.querySelectorAll('.navlist button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['dashboard','products','categories','transactions'].forEach(p=>{
+    document.getElementById('page-'+p).style.display = (p===btn.dataset.page) ? '' : 'none';
+  });
+});
+
+/* ---------- render ---------- */
+function renderAll(){
+  renderDashboard();
+  renderCategories();
+  renderProducts();
+  renderTransactions();
+  populateSelects();
+}
+
+function renderDashboard(){
+  document.getElementById('stat-products').textContent = state.products.length;
+  document.getElementById('stat-categories').textContent = state.categories.length;
+  const low = state.products.filter(p=>stockOf(p.id) < 5);
+  document.getElementById('stat-lowstock').textContent = low.length;
+
+  const lowBody = document.getElementById('lowstock-table');
+  lowBody.innerHTML = low.length ? low.map(p=>`
+    <tr><td data-label="สินค้า">${escapeHtml(p.name)}</td><td data-label="แบรนด์">${escapeHtml(categoryName(p.categoryId))}</td>
+    <td class="num" data-label="คงเหลือ" style="color:var(--out)">${stockOf(p.id)}</td></tr>`).join('')
+    : `<tr class="empty-row"><td colspan="3">ไม่มีสินค้าใกล้หมดสต็อก</td></tr>`;
+
+  const recent = [...state.transactions].sort((a,b)=> b.date.localeCompare(a.date) || b.id-a.id).slice(0,6);
+  const recentBody = document.getElementById('recent-table');
+  recentBody.innerHTML = recent.length ? recent.map(tx=>`
+    <tr><td data-label="วันที่">${fmtDate(tx.date)}</td><td data-label="สินค้า">${escapeHtml(productName(tx.productId))}</td>
+    <td data-label="ประเภท">${tx.type==='in' ? '<span class="badge badge-in">รับเข้า</span>' : '<span class="badge badge-out">จ่ายออก</span>'}</td>
+    <td class="num" data-label="จำนวน">${tx.type==='in'?'+':'-'}${tx.qty}</td></tr>`).join('')
+    : `<tr class="empty-row"><td colspan="4">ยังไม่มีรายการเคลื่อนไหว</td></tr>`;
+}
+
+function renderCategories(){
+  const body = document.getElementById('categories-table');
+  if(!state.categories.length){
+    body.innerHTML = `<tr class="empty-row"><td colspan="3">ยังไม่มีหมวดหมู่ กด "+ เพิ่มหมวดหมู่" เพื่อเริ่มต้น</td></tr>`;
+    return;
+  }
+  body.innerHTML = state.categories.map(c=>{
+    const count = state.products.filter(p=>p.categoryId===c.id).length;
+    return `<tr>
+      <td data-label="ชื่อ">${escapeHtml(c.name)}</td>
+      <td class="num" data-label="จำนวนสินค้า">${count}</td>
+      <td class="cell-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editCategory(${c.id})">แก้ไข</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCategory(${c.id}, this)">ลบ</button>
+      </td></tr>`;
+  }).join('');
+}
+
+function renderProducts(){
+  const catFilter = document.getElementById('filter-category').value;
+  const search = document.getElementById('search-product').value.trim().toLowerCase();
+  let list = state.products.filter(p=>{
+    if(catFilter && String(p.categoryId)!==catFilter) return false;
+    if(search && !p.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  list = list.sort((a,b)=> a.name.localeCompare(b.name, 'th'));
+
+  const body = document.getElementById('products-table');
+  if(!list.length){
+    body.innerHTML = `<tr class="empty-row"><td colspan="6">ไม่พบสินค้า</td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(p=>{
+    const s = stockOf(p.id);
+    const low = s < 5;
+    const pct = Math.max(4, Math.min(100, s));
+    const thumb = p.image
+      ? `<img class="thumb" src="${p.image}" alt="">`
+      : `<div class="thumb-placeholder">🏷️</div>`;
+    return `<tr>
+      <td class="cell-media">${thumb}</td>
+      <td data-label="สินค้า"><strong>${escapeHtml(p.name)}</strong></td>
+      <td data-label="หมวดหมู่"><span class="badge badge-cat">${escapeHtml(categoryName(p.categoryId))}</span></td>
+      <td class="num" data-label="คงเหลือ" style="${low?'color:var(--out)':''}">${s}</td>
+      <td class="cell-bar"><div class="stockbar"><div class="stockbar-fill ${low?'low':''}" style="width:${pct}%"></div></div></td>
+      <td class="cell-actions">
+        <button class="btn btn-primary btn-sm" onclick="openTxModal(${p.id})">↔️ รับ-จ่าย</button>
+        <button class="btn btn-ghost btn-sm" onclick="editProduct(${p.id})">แก้ไข</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id}, this)">ลบ</button>
+      </td></tr>`;
+  }).join('');
+}
+
+function renderTransactions(){
+  const prodFilter = document.getElementById('tx-filter-product').value;
+  const typeFilter = document.getElementById('tx-filter-type').value;
+  let list = [...state.transactions].filter(tx=>{
+    if(prodFilter && String(tx.productId)!==prodFilter) return false;
+    if(typeFilter && tx.type!==typeFilter) return false;
+    return true;
+  }).sort((a,b)=> b.date.localeCompare(a.date) || b.id-a.id);
+
+  const body = document.getElementById('tx-table');
+  if(!list.length){
+    body.innerHTML = `<tr class="empty-row"><td colspan="7">ยังไม่มีรายการรับ-จ่ายสต็อก</td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(tx=>{
+    const p = state.products.find(x=>x.id===tx.productId);
+    return `<tr>
+      <td data-label="วันที่">${fmtDate(tx.date)}</td>
+      <td data-label="สินค้า">${escapeHtml(productName(tx.productId))}</td>
+      <td data-label="แบรนด์">${escapeHtml(p ? categoryName(p.categoryId) : '-')}</td>
+      <td data-label="ประเภท">${tx.type==='in' ? '<span class="badge badge-in">รับเข้า</span>' : '<span class="badge badge-out">จ่ายออก</span>'}</td>
+      <td class="num" data-label="จำนวน">${tx.type==='in'?'+':'-'}${tx.qty}</td>
+      <td data-label="หมายเหตุ" style="color:var(--ink-soft); font-size:12.5px;">${escapeHtml(tx.note||'-')}</td>
+      <td class="cell-actions"><button class="btn btn-danger btn-sm" onclick="deleteTx(${tx.id}, this)">ลบ</button></td></tr>`;
+  }).join('');
+}
+
+function populateSelects(){
+  const catOptions = state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  document.getElementById('pf-category').innerHTML = catOptions || '<option value="">- ยังไม่มีหมวดหมู่ -</option>';
+  document.getElementById('filter-category').innerHTML = '<option value="">ทุกแบรนด์/หมวดหมู่</option>' + catOptions;
+
+  const prodOptions = state.products.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  document.getElementById('tf-product').innerHTML = prodOptions || '<option value="">- ยังไม่มีสินค้า -</option>';
+  document.getElementById('tx-filter-product').innerHTML = '<option value="">ทุกสินค้า</option>' + prodOptions;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* กันกดปุ่มซ้ำรัว ๆ ระหว่างรอเชื่อมต่อ Google ชีต (ทำให้เกิดรายการซ้ำ) */
+async function runGuarded(btn, busyText, fn){
+  if(btn.dataset.busy === '1') return;
+  btn.dataset.busy = '1';
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = busyText;
+  try{
+    await fn();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+    btn.dataset.busy = '0';
+  }
+}
+
+/* ---------- category CRUD ---------- */
+document.getElementById('add-category-btn').onclick = ()=>{
+  document.getElementById('modal-category-title').textContent = 'เพิ่มแบรนด์/หมวดหมู่';
+  document.getElementById('cf-id').value = '';
+  document.getElementById('cf-name').value = '';
+  openModal('modal-category');
+};
+function editCategory(id){
+  const c = state.categories.find(x=>x.id===id);
+  if(!c) return;
+  document.getElementById('modal-category-title').textContent = 'แก้ไขแบรนด์/หมวดหมู่';
+  document.getElementById('cf-id').value = c.id;
+  document.getElementById('cf-name').value = c.name;
+  openModal('modal-category');
+}
+document.getElementById('cf-save').onclick = function(){
+  runGuarded(this, 'กำลังบันทึก...', async ()=>{
+    const name = document.getElementById('cf-name').value.trim();
+    if(!name){ showToast('กรุณากรอกชื่อหมวดหมู่'); return; }
+    const id = document.getElementById('cf-id').value;
+    try{
+      if(id){
+        await gasRequest({ sheet:'categories', action:'update', id, data:{ name } });
+        const c = state.categories.find(x=>x.id===Number(id));
+        if(c) c.name = name;
+      }else{
+        const res = await gasRequest({ sheet:'categories', action:'insert', data:{ name } });
+        state.categories.push({ id: res.id, name });
+      }
+    }catch(e){ showToast('บันทึกไม่สำเร็จ: ' + e.message); return; }
+    renderAll();
+    closeModal('modal-category');
+    showToast('บันทึกหมวดหมู่แล้ว');
+  });
+};
+async function deleteCategory(id, btn){
+  const inUse = state.products.some(p=>p.categoryId===id);
+  if(inUse){ showToast('ลบไม่ได้: มีสินค้าอยู่ในหมวดหมู่นี้'); return; }
+  if(!confirm('ยืนยันการลบหมวดหมู่นี้?')) return;
+  await runGuarded(btn, 'กำลังลบ...', async ()=>{
+    try{
+      await gasRequest({ sheet:'categories', action:'delete', id });
+    }catch(e){ showToast('ลบไม่สำเร็จ: ' + e.message); return; }
+    state.categories = state.categories.filter(x=>x.id!==id);
+    renderAll();
+    showToast('ลบหมวดหมู่แล้ว');
+  });
+}
+
+/* ---------- product image handling ---------- */
+function setImagePreview(dataUrl){
+  const img = document.getElementById('pf-image-preview');
+  const placeholder = document.getElementById('pf-image-placeholder');
+  const removeBtn = document.getElementById('pf-image-remove');
+  document.getElementById('pf-image-data').value = dataUrl || '';
+  if(dataUrl){
+    img.src = dataUrl;
+    img.style.display = '';
+    placeholder.style.display = 'none';
+    removeBtn.style.display = '';
+  }else{
+    img.style.display = 'none';
+    placeholder.style.display = '';
+    removeBtn.style.display = 'none';
+  }
+}
+
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxSize = 320;
+        let w = img.width, h = img.height;
+        if(w > h && w > maxSize){ h = Math.round(h * maxSize / w); w = maxSize; }
+        else if(h > maxSize){ w = Math.round(w * maxSize / h); h = maxSize; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('pf-image-file').addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ showToast('กรุณาเลือกไฟล์รูปภาพ'); return; }
+  try{
+    const dataUrl = await compressImage(file);
+    if(dataUrl.length > 45000){
+      showToast('รูปนี้มีรายละเอียดเยอะเกินไป กรุณาลองรูปอื่นที่เรียบง่ายกว่านี้');
+      return;
+    }
+    setImagePreview(dataUrl);
+  }catch(err){
+    showToast('อ่านไฟล์รูปไม่สำเร็จ');
+  }
+});
+document.getElementById('pf-image-remove').onclick = ()=> setImagePreview('');
+
+/* ---------- product CRUD ---------- */
+document.getElementById('add-product-btn').onclick = ()=>{
+  if(!state.categories.length){ showToast('กรุณาเพิ่มแบรนด์/หมวดหมู่ก่อน'); return; }
+  document.getElementById('modal-product-title').textContent = 'เพิ่มสินค้า';
+  document.getElementById('pf-id').value = '';
+  document.getElementById('pf-name').value = '';
+  document.getElementById('pf-stock').value = 0;
+  document.getElementById('pf-image-file').value = '';
+  setImagePreview('');
+  populateSelects();
+  openModal('modal-product');
+};
+function editProduct(id){
+  const p = state.products.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('modal-product-title').textContent = 'แก้ไขสินค้า';
+  document.getElementById('pf-id').value = p.id;
+  document.getElementById('pf-name').value = p.name;
+  document.getElementById('pf-category').value = p.categoryId;
+  document.getElementById('pf-stock').value = p.initialStock;
+  document.getElementById('pf-image-file').value = '';
+  setImagePreview(p.image || '');
+  openModal('modal-product');
+}
+document.getElementById('pf-save').onclick = function(){
+  runGuarded(this, 'กำลังบันทึก...', async ()=>{
+    const name = document.getElementById('pf-name').value.trim();
+    const categoryId = Number(document.getElementById('pf-category').value);
+    const stock = Number(document.getElementById('pf-stock').value) || 0;
+    const image = document.getElementById('pf-image-data').value || '';
+    if(!name){ showToast('กรุณากรอกชื่อสินค้า'); return; }
+    if(!categoryId){ showToast('กรุณาเลือกแบรนด์/หมวดหมู่'); return; }
+    const id = document.getElementById('pf-id').value;
+    const row = { name, category_id: categoryId, initial_stock: stock, image };
+    try{
+      if(id){
+        await gasRequest({ sheet:'products', action:'update', id, data: row });
+        const p = state.products.find(x=>x.id===Number(id));
+        if(p){ p.name=name; p.categoryId=categoryId; p.initialStock=stock; p.image=image; }
+      }else{
+        const res = await gasRequest({ sheet:'products', action:'insert', data: row });
+        state.products.push({ id: res.id, categoryId, name, initialStock: stock, image });
+      }
+    }catch(e){ showToast('บันทึกไม่สำเร็จ: ' + e.message); return; }
+    renderAll();
+    closeModal('modal-product');
+    showToast('บันทึกสินค้าแล้ว');
+  });
+};
+async function deleteProduct(id, btn){
+  if(!confirm('ยืนยันการลบสินค้านี้? ประวัติรายการรับ-จ่ายที่เกี่ยวข้องจะถูกลบด้วย')) return;
+  await runGuarded(btn, 'กำลังลบ...', async ()=>{
+    try{
+      await gasRequest({ sheet:'products', action:'delete', id });
+      const relatedTx = state.transactions.filter(t=>t.productId===id);
+      for(const tx of relatedTx){
+        await gasRequest({ sheet:'transactions', action:'delete', id: tx.id });
+      }
+      state.products = state.products.filter(x=>x.id!==id);
+      state.transactions = state.transactions.filter(t=>t.productId!==id);
+    }catch(e){ showToast('ลบไม่สำเร็จ: ' + e.message); return; }
+    renderAll();
+    showToast('ลบสินค้าแล้ว');
+  });
+}
+
+/* ---------- transaction CRUD ---------- */
+function setTxType(type){
+  currentTxType = type;
+  document.getElementById('tf-type-in').classList.toggle('active', type==='in');
+  document.getElementById('tf-type-out').classList.toggle('active', type==='out');
+}
+document.getElementById('add-tx-btn').onclick = ()=> openTxModal();
+
+function openTxModal(productId){
+  if(!state.products.length){ showToast('กรุณาเพิ่มสินค้าก่อน'); return; }
+  setTxType('in');
+  document.getElementById('tf-qty').value = 1;
+  document.getElementById('tf-note').value = '';
+  document.getElementById('tf-date').value = new Date().toISOString().slice(0,10);
+  populateSelects();
+  if(productId){
+    document.getElementById('tf-product').value = productId;
+  }
+  openModal('modal-tx');
+}
+document.getElementById('tf-save').onclick = function(){
+  runGuarded(this, 'กำลังบันทึก...', async ()=>{
+    const productId = Number(document.getElementById('tf-product').value);
+    const qty = Number(document.getElementById('tf-qty').value);
+    const date = document.getElementById('tf-date').value;
+    const note = document.getElementById('tf-note').value.trim();
+    if(!productId){ showToast('กรุณาเลือกสินค้า'); return; }
+    if(!qty || qty<=0){ showToast('กรุณาระบุจำนวนที่ถูกต้อง'); return; }
+    if(!date){ showToast('กรุณาเลือกวันที่'); return; }
+    if(currentTxType==='out' && stockOf(productId) < qty){
+      if(!confirm('จำนวนที่จ่ายออกมากกว่าสต็อกคงเหลือ ต้องการดำเนินการต่อหรือไม่?')) return;
+    }
+    try{
+      const res = await gasRequest({ sheet:'transactions', action:'insert', data:{
+        product_id: productId, type: currentTxType, qty, date, note
+      }});
+      state.transactions.push({ id: res.id, productId, type: currentTxType, qty, date, note });
+      state.transactions.sort((a,b)=> b.date.localeCompare(a.date) || b.id-a.id);
+    }catch(e){ showToast('บันทึกไม่สำเร็จ: ' + e.message); return; }
+    renderAll();
+    closeModal('modal-tx');
+    showToast('บันทึกรายการแล้ว');
+  });
+};
+async function deleteTx(id, btn){
+  if(!confirm('ยืนยันการลบรายการนี้?')) return;
+  await runGuarded(btn, 'กำลังลบ...', async ()=>{
+    try{
+      await gasRequest({ sheet:'transactions', action:'delete', id });
+    }catch(e){ showToast('ลบไม่สำเร็จ: ' + e.message); return; }
+    state.transactions = state.transactions.filter(x=>x.id!==id);
+    renderAll();
+    showToast('ลบรายการแล้ว');
+  });
+}
+
+/* filters */
+document.getElementById('filter-category').addEventListener('change', renderProducts);
+document.getElementById('search-product').addEventListener('input', renderProducts);
+document.getElementById('tx-filter-product').addEventListener('change', renderTransactions);
+document.getElementById('tx-filter-type').addEventListener('change', renderTransactions);
+
+loadState();
+if(isConfigured){
+  setInterval(loadState, 20000);
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+
+</body>
+</html>
